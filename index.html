@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel de Vigilância em Saúde – Modo TV</title>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root {
+      --cor-fundo: #f3f4f6;
+      --cor-card: #ffffff;
+      --cor-primaria: #1f2937;
+      --cor-secundaria: #2563eb;
+      --cor-texto: #111827;
+      --cor-texto-secundario: #4b5563;
+      --cor-borda: #e5e7eb;
+      --cor-alerta: #dc2626;
+      --cor-sucesso: #16a34a;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--cor-fundo);
+      color: var(--cor-texto);
+      height: 100vh;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* LATERAL (como o painel anterior) */
+    .sidebar {
+      width: 260px;
+      background: #111827;
+      color: #e5e7eb;
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+      gap: 16px;
+    }
+
+    .logo-area {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .logo-titulo {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .logo-subtitulo {
+      font-size: 0.8rem;
+      color: #9ca3af;
+    }
+
+    .menu {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 8px;
+    }
+
+    .menu-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #6b7280;
+      margin-bottom: 4px;
+    }
+
+    .menu-btn {
+      border: none;
+      background: transparent;
+      color: #e5e7eb;
+      text-align: left;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .menu-btn span.badge {
+      font-size: 0.7rem;
+      background: #374151;
+      padding: 2px 6px;
+      border-radius: 999px;
+      color: #e5e7eb;
+    }
+
+    .menu-btn.active {
+      background: #1f2937;
+    }
+
+    .rodape-sidebar {
+      margin-top: auto;
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+
+    /* CONTEÚDO PRINCIPAL */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 12px 16px;
+      gap: 8px;
+      overflow: hidden;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .titulo-header {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .titulo-header h1 {
+      font-size: 1.3rem;
+      color: var(--cor-primaria);
+    }
+
+    .titulo-header p {
+      font-size: 0.85rem;
+      color: var(--cor-texto-secundario);
+    }
+
+    .info-header {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      font-size: 0.8rem;
+      color: var(--cor-texto-secundario);
+    }
+
+    .pill {
+      background: #dbeafe;
+      color: #1d4ed8;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+    }
+
+    /* FAIXA DE ALERTA EM MOVIMENTO (tipo ticker) */
+    .ticker-wrapper {
+      background: #111827;
+      color: #f9fafb;
+      border-radius: 999px;
+      padding: 4px 0;
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+
+    .ticker {
+      white-space: nowrap;
+      display: inline-block;
+      padding-left: 100%;
+      animation: ticker-move 35s linear infinite;
+      font-size: 0.8rem;
+    }
+
+    @keyframes ticker-move {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-100%); }
+    }
+
+    /* ÁREA DO SLIDE */
+    .slides-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow: hidden;
+    }
+
+    .slide {
+      display: none;
+      height: 100%;
+      animation: fadeIn 0.5s ease-out;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .slide.active {
+      display: flex;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* GRID DE CARDS */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    @media (max-width: 1200px) {
+      .cards-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    .card {
+      background: var(--cor-card);
+      border-radius: 12px;
+      padding: 10px;
+      border: 1px solid var(--cor-borda);
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::after {
+      content: "";
+      position: absolute;
+      inset: auto -40px -40px auto;
+      width: 80px;
+      height: 80px;
+      background: radial-gradient(circle, rgba(37,99,235,0.15), transparent 70%);
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    .card-titulo {
+      font-size: 0.8rem;
+      color: var(--cor-texto-secundario);
+    }
+
+    .card-valor {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--cor-primaria);
+    }
+
+    .card-sub {
+      font-size: 0.7rem;
+      color: var(--cor-texto-secundario);
+    }
+
+    .card-tag {
+      font-size: 0.7rem;
+      padding: 2px 6px;
+      border-radius: 999px;
+      align-self: flex-start;
+    }
+
+    .tag-alerta {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .tag-sucesso {
+      background: #dcfce7;
+      color: #15803d;
+    }
+
+    /* ÁREA DE GRÁFICOS */
+    .graficos-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 2.2fr) minmax(0, 1.8fr);
+      gap: 8px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    @media (max-width: 1200px) {
+      .graficos-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .grafico-card {
+      background: var(--cor-card);
+      border-radius: 12px;
+      padding: 10px;
+      border: 1px solid var(--cor-borda);
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .grafico-titulo {
+      font-size: 0.85rem;
+      color: var(--cor-texto-secundario);
+      margin-bottom: 6px;
+    }
+
+    .grafico-container {
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* Classe para números animados (leve destaque pulsando) */
+    .animado {
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.03); }
+      100% { transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+  <!-- LATERAL ESQUERDA -->
+  <aside class="sidebar">
+    <div class="logo-area">
+      <div class="logo-titulo">Vigilância em Saúde</div>
+      <div class="logo-subtitulo">Monitoramento Dinâmico – 2025</div>
+    </div>
+
+    <div>
+      <div class="menu-label">Módulos</div>
+      <div class="menu">
+        <button class="menu-btn active" data-slide="0">
+          Visão Geral <span class="badge">Auto</span>
+        </button>
+        <button class="menu-btn" data-slide="1">
+          Dengue <span class="badge">Endemias</span>
+        </button>
+        <button class="menu-btn" data-slide="2">
+          Nascidos Vivos <span class="badge">SINASC</span>
+        </button>
+        <button class="menu-btn" data-slide="3">
+          Raiva / Antirrábico <span class="badge">Zoonoses</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="rodape-sidebar">
+      Painel otimizado para projeção em TV.<br />
+      Ciclo automático a cada 15 segundos.<br />
+      <strong>Dica:</strong> use F11 para tela cheia.
+    </div>
+  </aside>
+
+  <!-- CONTEÚDO PRINCIPAL -->
+  <main class="main">
+    <header>
+      <div class="titulo-header">
+        <h1>Painel de Vigilância em Saúde – Município Exemplo</h1>
+        <p>Dados consolidados – ano 2025 (demonstração)</p>
+      </div>
+      <div class="info-header">
+        <span>Última atualização: <span id="ultimoUpdate">--:--:--</span></span>
+        <span class="pill">Modo apresentação automática</span>
+      </div>
+    </header>
+
+    <!-- TICKER DE ALERTAS -->
+    <div class="ticker-wrapper">
+      <div class="ticker" id="tickerTexto">
+        ALERTA: Aumento de 32% nos casos de Dengue nas últimas 4 semanas | 
+        Cobertura de pré-natal acima de 90% em 5 unidades de saúde | 
+        Nenhum caso confirmado de Raiva humana no período analisado | 
+        Lembrete: atualizar os dados do SINAN até o dia 10 de cada mês.
+      </div>
+    </div>
+
+    <!-- SLIDES -->
+    <div class="slides-wrapper">
+      <!-- SLIDE 0 – VISÃO GERAL -->
+      <section class="slide active" data-index="0">
+        <div class="cards-grid">
+          <div class="card">
+            <div class="card-titulo">Casos de Dengue (ano)</div>
+            <div class="card-valor animado" data-valor="320" id="dengueAno">0</div>
+            <div class="card-sub">Comparado a 2024: +18%</div>
+            <span class="card-tag tag-alerta">Tendência de alta</span>
+          </div>
+          <div class="card">
+            <div class="card-titulo">Nascidos Vivos (ano)</div>
+            <div class="card-valor animado" data-valor="580" id="nascidosAno">0</div>
+            <div class="card-sub">Média mensal: 48,3 nascimentos</div>
+            <span class="card-tag tag-sucesso">Estável</span>
+          </div>
+          <div class="card">
+            <div class="card-titulo">Atendimentos Antirrábicos</div>
+            <div class="card-valor animado" data-valor="42" id="antirrabicoAno">0</div>
+            <div class="card-sub">Vacinas e soros humanos</div>
+            <span class="card-tag">Monitorado</span>
+          </div>
+          <div class="card">
+            <div class="card-titulo">Notificações SINAN</div>
+            <div class="card-valor animado" data-valor="910" id="sinanAno">0</div>
+            <div class="card-sub">Agravos mais notificados no ano</div>
+            <span class="card-tag">Geral</span>
+          </div>
+        </div>
+
+        <div class="graficos-grid">
+          <div class="grafico-card">
+            <div class="grafico-titulo">Evolução mensal – Dengue x Antirrábico (2025)</div>
+            <div class="grafico-container">
+              <canvas id="graficoGeral"></canvas>
+            </div>
+          </div>
+          <div class="grafico-card">
+            <div class="grafico-titulo">Top 5 agravos notificados – SINAN</div>
+            <div class="grafico-container">
+              <canvas id="graficoTopAgravos"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 1 – DENGUE -->
+      <section class="slide" data-index="1">
+        <div class="cards-grid">
+          <div class="card">
+            <div class="card-titulo">Casos Notificados</div>
+            <div class="card-valor animado" data-valor="320">0</div>
+            <div class="card-sub">Todos os estágios de classificação</div>
+            <span class="card-tag tag-alerta">Atenção</span>
+          </div>
+          <div class="card">
+            <div class="card-titulo">Casos Confirmados</div>
+            <div class="card-valor animado" data-valor="210">0</div>
+            <div class="card-sub">Critérios laboratoriais e clínicos</div>
+            <span class="card-tag">Confirmados</span>
+          </div>
+          <div class="card">
+            <div class="card-titulo">Óbitos por Dengue</div>
+            <div class="card-valor animado" data-valor="2">0</div>
+            <div class="card-sub">Óbitos confirmados no período</div>
+            <span class="card-tag tag-alerta">Evento sentinela</span>
+          </div>
+          <div class="card">
+            <div class="card-titulo">Incidência / 100 mil hab.</div>
+            <div class="card-valor animado" data-valor="275">0</div>
+            <div class="card-sub">População estimada: 116 mil</div>
+            <span class="card-tag">Indicador</span>
+          </div>
+        </div>
+
+        <div class="graficos-grid">
+          <div class="grafico-card">
+            <div class="grafico-titulo">Casos de Dengue por mês</div>
+            <div class="grafico-container">
+              <canvas id="graficoDengueMes"></canvas>
+            </div>
+          </div>
+          <div class="grafico-card">
+            <div class="grafico-titulo">Distribuição de casos por bairro</div>
+            <div class="grafico-container">
+              <canvas id="graficoDengueBairro"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 2 – NASCIDOS VIVOS -->
+      <section class="slide" data-index="2">
+        <div class="cards-grid">
+          <div class="card">
+            <div class="card-titulo">Nascidos Vivos (ano)</div>
+            <div class="card-valor animado" data-valor="580">0</div>
+            <div class="card-sub">Dados do SINASC</div>
+            <span class="card-tag tag-sucesso">Acompanhado</span>
+          </div>
+          <div class="card">
+            <div class="card-titulo">% Prematuros</div>
+            <div class="card-valor animado" data-valor="8">0</div>
+            <div class="card-sub">Menos de 37 semanas</div>
+            <span class="card-tag">Qualidade</span>
+          </div>
+          <div class="card">
+            <div class="card-titulo">% Baixo Peso ao Nascer</div>
+            <div class="card-valor animado" data-valor="6">0</div>
+            <div class="card-sub">Menos de 2.500 g</div>
+            <span class="card-tag">Vulnerabilidade</span>
+          </div>
+          <div class="card">
+            <div class="card-titulo">Cobertura de Pré-natal ≥ 6 consultas</div>
+            <div class="card-valor animado" data-valor="89">0</div>
+            <div class="card-sub">Gestantes acompanhadas</div>
+            <span class="card-tag tag-sucesso">Bom</span>
+          </div>
+        </div>
+
+        <div class="graficos-grid">
+          <div class="grafico-card">
+            <div class="grafico-titulo">Nascidos vivos por mês</div>
+            <div class="grafico-container">
+              <canvas id="graficoNascidosMes"></canvas>
+            </div>
+          </div>
+          <div class="grafico-card">
+            <div class="grafico-titulo">Tipo de parto</div>
+            <div class="grafico-container">
+              <canvas id="graficoTipoParto"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 3 – RAIVA / ANTIRRÁBICO -->
+      <section class="slide" data-index="3">
+        <div class="cards-grid">
+          <div class="card">
+            <div class="card-titulo">Atendimentos antirrábicos</div>
+            <div class="card-valor animado" data-valor="42">0</div>
+            <div class="card-sub">Exposição a animais suspeitos</div>
+            <span class="card-tag">Humano</span>
+          </div>
+          <div class="card">
+            <div class="card-titulo">Vacinas aplicadas</div>
+            <div class="card-valor animado" data-valor="118">0</div>
+            <div class="card-sub">Esquemas completos e incompletos</div>
+            <span class="card-tag">Imunização</span>
+          </div>
+          <div class="card">
+            <div class="card-titulo">Soros aplicados</div>
+            <div class="card-valor animado" data-valor="9">0</div>
+            <div class="card-sub">Situações de maior risco</div>
+            <span class="card-tag tag-alerta">Alto risco</span>
+          </div>
+          <div class="card">
+            <div class="card-titulo">Casos confirmados (animal)</div>
+            <div class="card-valor animado" data-valor="0">0</div>
+            <div class="card-sub">Raiva em cães, gatos e morcegos</div>
+            <span class="card-tag tag-sucesso">Sem casos</span>
+          </div>
+        </div>
+
+        <div class="graficos-grid">
+          <div class="grafico-card">
+            <div class="grafico-titulo">Atendimentos antirrábicos por mês</div>
+            <div class="grafico-container">
+              <canvas id="graficoAntirrabicoMes"></canvas>
+            </div>
+          </div>
+          <div class="grafico-card">
+            <div class="grafico-titulo">Animal agressor</div>
+            <div class="grafico-container">
+              <canvas id="graficoAnimalAgressor"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    // Atualizar hora do "Última atualização"
+    function atualizarHora() {
+      const agora = new Date();
+      const h = String(agora.getHours()).padStart(2, "0");
+      const m = String(agora.getMinutes()).padStart(2, "0");
+      const s = String(agora.getSeconds()).padStart(2, "0");
+      document.getElementById("ultimoUpdate").textContent = `${h}:${m}:${s}`;
+    }
+    atualizarHora();
+    setInterval(atualizarHora, 1000);
+
+    // Animação de contagem dos números (0 até valor do data-valor)
+    function animarNumeros(slideElement) {
+      const elementos = slideElement.querySelectorAll(".card-valor.animado");
+      elementos.forEach(el => {
+        const alvo = Number(el.getAttribute("data-valor") || "0");
+        let inicio = 0;
+        const duracao = 1200; // ms
+        const inicioTime = performance.now();
+
+        function atualizar(t) {
+          const progresso = Math.min((t - inicioTime) / duracao, 1);
+          const valorAtual = Math.floor(progresso * alvo);
+          el.textContent = valorAtual.toLocaleString("pt-BR");
+          if (progresso < 1) {
+            requestAnimationFrame(atualizar);
+          }
+        }
+        requestAnimationFrame(atualizar);
+      });
+    }
+
+    // Lógica de slides automáticos
+    const slides = document.querySelectorAll(".slide");
+    const menuBtns = document.querySelectorAll(".menu-btn");
+    let slideAtual = 0;
+    let intervalo = null;
+
+    function mostrarSlide(indice) {
+      slides.forEach(s => s.classList.remove("active"));
+      menuBtns.forEach(b => b.classList.remove("active"));
+
+      slideAtual = indice;
+      const slide = slides[indice];
+      slide.classList.add("active");
+
+      const btn = document.querySelector(`.menu-btn[data-slide="${indice}"]`);
+      if (btn) btn.classList.add("active");
+
+      animarNumeros(slide);
+    }
+
+    function iniciarAutoPlay() {
+      if (intervalo) clearInterval(intervalo);
+      intervalo = setInterval(() => {
+        const proximo = (slideAtual + 1) % slides.length;
+        mostrarSlide(proximo);
+      }, 15000); // 15 segundos
+    }
+
+    menuBtns.forEach(btn => {
+      btn.addEventListener("click", () => {
+        const indice = Number(btn.getAttribute("data-slide"));
+        mostrarSlide(indice);
+        iniciarAutoPlay(); // reinicia o ciclo ao trocar manualmente
+      });
+    });
+
+    // Pausa leve se o usuário mexer o mouse (para não ficar trocando enquanto alguém analisa)
+    let ultimoMovimento = Date.now();
+    document.addEventListener("mousemove", () => {
+      const agora = Date.now();
+      if (agora - ultimoMovimento > 3000) {
+        // se passou mais de 3s sem movimento, recomeça o autoplay
+        iniciarAutoPlay();
+      }
+      ultimoMovimento = agora;
+    });
+
+    // Iniciar com o slide 0 animado e autoplay
+    animarNumeros(slides[0]);
+    iniciarAutoPlay();
+
+    // ====== GRÁFICOS (dados fictícios) ======
+    const labelsMes = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+
+    // Visão geral - linha Dengue x Antirrábico
+    new Chart(document.getElementById("graficoGeral"), {
+      type: "line",
+      data: {
+        labels: labelsMes,
+        datasets: [
+          {
+            label: "Casos de Dengue",
+            data: [10, 25, 40, 60, 80, 55, 30, 15, 10, 8, 5, 2],
+            tension: 0.3
+          },
+          {
+            label: "Atendimentos antirrábicos",
+            data: [2, 4, 3, 5, 6, 4, 3, 2, 3, 4, 3, 3],
+            tension: 0.3
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: "bottom" }
+        }
+      }
+    });
+
+    // Top 5 agravos
+    new Chart(document.getElementById("graficoTopAgravos"), {
+      type: "bar",
+      data: {
+        labels: ["Dengue", "COVID-19", "Chikungunya", "Ac. animal peçonhento", "SRAG"],
+        datasets: [{
+          label: "Notificações",
+          data: [320, 210, 120, 90, 70]
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false }
+        }
+      }
+    });
+
+    // Dengue – por mês
+    new Chart(document.getElementById("graficoDengueMes"), {
+      type: "bar",
+      data: {
+        labels: labelsMes,
+        datasets: [{
+          label: "Casos de Dengue",
+          data: [10, 25, 40, 60, 80, 55, 30, 15, 10, 8, 5, 2]
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false }
+        }
+      }
+    });
+
+    // Dengue – por bairro
+    new Chart(document.getElementById("graficoDengueBairro"), {
+      type: "bar",
+      data: {
+        labels: ["Bairro A", "Bairro B", "Bairro C", "Bairro D", "Bairro E"],
+        datasets: [{
+          label: "Casos",
+          data: [80, 60, 40, 30, 20]
+        }]
+      },
+      options: {
+        indexAxis: "y",
+        responsive: true,
+        plugins: {
+          legend: { display: false }
+        }
+      }
+    });
+
+    // Nascidos vivos – por mês
+    new Chart(document.getElementById("graficoNascidosMes"), {
+      type: "bar",
+      data: {
+        labels: labelsMes,
+        datasets: [{
+          label: "Nascidos vivos",
+          data: [40, 42, 45, 48, 50, 52, 49, 47, 46, 44, 43, 40]
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false }
+        }
+      }
+    });
+
+    // Tipo de parto
+    new Chart(document.getElementById("graficoTipoParto"), {
+      type: "pie",
+      data: {
+        labels: ["Normal", "Cesárea"],
+        datasets: [{
+          data: [58, 42]
+        }]
+      },
+      options: { responsive: true }
+    });
+
+    // Antirrábico – por mês
+    new Chart(document.getElementById("graficoAntirrabicoMes"), {
+      type: "bar",
+      data: {
+        labels: labelsMes,
+        datasets: [{
+          label: "Atendimentos",
+          data: [2, 3, 4, 5, 7, 6, 4, 3, 3, 2, 2, 1]
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false }
+        }
+      }
+    });
+
+    // Animal agressor
+    new Chart(document.getElementById("graficoAnimalAgressor"), {
+      type: "doughnut",
+      data: {
+        labels: ["Cão", "Gato", "Morcego", "Outros"],
+        datasets: [{
+          data: [55, 20, 15, 10]
+        }]
+      },
+      options: { responsive: true }
+    });
+  </script>
+</body>
+</html>
